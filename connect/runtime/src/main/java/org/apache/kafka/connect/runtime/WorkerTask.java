@@ -17,6 +17,7 @@
 package org.apache.kafka.connect.runtime;
 
 import org.apache.kafka.connect.runtime.isolation.Plugins;
+import org.apache.kafka.connect.runtime.zkclient.Lock;
 import org.apache.kafka.connect.util.ConnectorTaskId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,17 +46,26 @@ abstract class WorkerTask implements Runnable {
     private volatile TargetState targetState;
     private volatile boolean stopping;   // indicates whether the Worker has asked the task to stop
     private volatile boolean cancelled;  // indicates whether the Worker has cancelled the task (e.g. because of slow shutdown)
+    Lock lock;
 
     public WorkerTask(ConnectorTaskId id,
                       TaskStatus.Listener statusListener,
                       TargetState initialState,
                       ClassLoader loader) {
+        this(id,statusListener,initialState,loader,null);
+    }
+
+    public WorkerTask(ConnectorTaskId id,
+                      TaskStatus.Listener statusListener,
+                      TargetState initialState,
+                      ClassLoader loader,Lock lock) {
         this.id = id;
         this.statusListener = statusListener;
         this.loader = loader;
         this.targetState = initialState;
         this.stopping = false;
         this.cancelled = false;
+        this.lock = lock;
     }
 
     public ConnectorTaskId id() {
@@ -142,7 +152,9 @@ abstract class WorkerTask implements Runnable {
 
                 statusListener.onStartup(id);
             }
-
+            if (lock != null){
+                lock.lock(id.toString(),"");
+            }
             execute();
         } catch (Throwable t) {
             log.error("Task {} threw an uncaught and unrecoverable exception", id, t);
@@ -150,6 +162,9 @@ abstract class WorkerTask implements Runnable {
             throw t;
         } finally {
             doClose();
+            if (lock != null){
+                lock.unlock(id.toString());
+            }
         }
     }
 

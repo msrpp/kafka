@@ -24,6 +24,7 @@ import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.RetriableException;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.runtime.zkclient.Lock;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.storage.Converter;
@@ -87,8 +88,8 @@ class WorkerSourceTask extends WorkerTask {
                             OffsetStorageWriter offsetWriter,
                             WorkerConfig workerConfig,
                             ClassLoader loader,
-                            Time time) {
-        super(id, statusListener, initialState, loader);
+                            Time time , Lock lock) {
+        super(id, statusListener, initialState, loader,lock);
 
         this.workerConfig = workerConfig;
         this.task = task;

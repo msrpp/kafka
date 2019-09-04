@@ -72,6 +72,7 @@ versions += [
   zookeeper: "3.4.10",
   jfreechart: "1.0.0",
   mavenArtifact: "3.5.0",
+  zkFramework: "2.12.0",
 ]
 
 libs += [
@@ -114,5 +115,6 @@ libs += [
   zkclient: "com.101tec:zkclient:$versions.zkclient",
   zookeeper: "org.apache.zookeeper:zookeeper:$versions.zookeeper",
   jfreechart: "jfreechart:jfreechart:$versions.jfreechart",
-  mavenArtifact: "org.apache.maven:maven-artifact:$versions.mavenArtifact"
+  mavenArtifact: "org.apache.maven:maven-artifact:$versions.mavenArtifact",
+  zkFramework: "org.apache.curator:curator-framework:$versions.zkFramework"
 ]

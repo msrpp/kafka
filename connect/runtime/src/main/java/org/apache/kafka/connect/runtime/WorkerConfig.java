@@ -137,6 +137,11 @@ public class WorkerConfig extends AbstractConfig {
             + "Note: symlinks will be followed to discover dependencies or plugins.\n"
             + "Examples: plugin.path=/usr/local/share/java,/usr/local/share/kafka/plugins,"
             + "/opt/connectors";
+    public static final String REBALENCE_LOCK_ENABLE = "rebalance.lock.enable";
+
+    public static final String ZOOKEEPER_SERVERS = "zookeeper.servers";
+
+    public static final String ZOKKEPER_ROOT_PATH = "zookeeper.root.path";
 
     /**
      * Get a basic ConfigDef for a WorkerConfig. This includes all the common settings. Subclasses can use this to
@@ -178,7 +183,10 @@ public class WorkerConfig extends AbstractConfig {
                         null,
                         Importance.LOW,
                         PLUGIN_PATH_DOC
-                );
+                )
+                .define(REBALENCE_LOCK_ENABLE,Type.BOOLEAN,false,Importance.LOW,"")
+                .define(ZOOKEEPER_SERVERS , Type.STRING,null,Importance.LOW,"")
+                .define(ZOKKEPER_ROOT_PATH,Type.STRING,null,Importance.LOW,"");
     }
 
     @Override

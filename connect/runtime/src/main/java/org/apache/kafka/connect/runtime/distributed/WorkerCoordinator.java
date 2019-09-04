@@ -23,21 +23,16 @@ import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.requests.JoinGroupRequest;
 import org.apache.kafka.common.requests.JoinGroupRequest.ProtocolMetadata;
-import org.apache.kafka.common.utils.CircularIterator;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.storage.ConfigBackingStore;
 import org.apache.kafka.connect.util.ConnectorTaskId;
+import org.apache.kafka.connect.util.ConsistentHashBalance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This class manages the coordination process with the Kafka group coordinator on the broker for managing assignments
@@ -215,21 +210,27 @@ public final class WorkerCoordinator extends AbstractCoordinator implements Clos
         // that generate only 1 task each; in a cluster of 2 or an even # of nodes, only even nodes will be assigned
         // connectors and only odd nodes will be assigned tasks, but tasks are, on average, actually more resource
         // intensive than connectors).
-        List<String> connectorsSorted = sorted(configSnapshot.connectors());
-        CircularIterator<String> memberIt = new CircularIterator<>(sorted(memberConfigs.keySet()));
-        for (String connectorId : connectorsSorted) {
-            String connectorAssignedTo = memberIt.next();
-            log.trace("Assigning connector {} to {}", connectorId, connectorAssignedTo);
+        Set<String> connectors = configSnapshot.connectors();
+
+        ConsistentHashBalance<String> balance = new ConsistentHashBalance();
+        for (String member : memberConfigs.keySet()){
+            balance.addRouter(member,1);
+        }
+
+        for (String connector: connectors){
+            String connectorAssignedTo =  balance.select(connector);
             List<String> memberConnectors = connectorAssignments.get(connectorAssignedTo);
             if (memberConnectors == null) {
                 memberConnectors = new ArrayList<>();
                 connectorAssignments.put(connectorAssignedTo, memberConnectors);
             }
-            memberConnectors.add(connectorId);
+            memberConnectors.add(connector);
         }
-        for (String connectorId : connectorsSorted) {
+
+
+        for (String connectorId : connectors) {
             for (ConnectorTaskId taskId : sorted(configSnapshot.tasks(connectorId))) {
-                String taskAssignedTo = memberIt.next();
+                String taskAssignedTo = balance.select(connectorId);
                 log.trace("Assigning task {} to {}", taskId, taskAssignedTo);
                 List<ConnectorTaskId> memberTasks = taskAssignments.get(taskAssignedTo);
                 if (memberTasks == null) {
@@ -245,6 +246,9 @@ public final class WorkerCoordinator extends AbstractCoordinator implements Clos
         return fillAssignmentsAndSerialize(memberConfigs.keySet(), ConnectProtocol.Assignment.NO_ERROR,
                 leaderId, memberConfigs.get(leaderId).url(), maxOffset, connectorAssignments, taskAssignments);
     }
+
+
+
 
     private Map<String, ByteBuffer> fillAssignmentsAndSerialize(Collection<String> members,
                                                                 short error,

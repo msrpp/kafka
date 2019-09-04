@@ -136,6 +136,11 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
     private Set<String> connectorTargetStateChanges = new HashSet<>();
     private boolean needsReconfigRebalance;
     private volatile int generation;
+    private boolean useLock;
+
+    private volatile Collection<String> connectorsLastTurnAssigned = Collections.EMPTY_SET;
+
+    private volatile Collection<ConnectorTaskId> tasksLastTurnAssigned = Collections.EMPTY_SET;
 
     public DistributedHerder(DistributedConfig config,
                              Time time,
@@ -173,6 +178,8 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
                 });
         this.forwardRequestExecutor = Executors.newSingleThreadExecutor();
         this.startAndStopExecutor = Executors.newFixedThreadPool(START_STOP_THREAD_POOL_SIZE);
+        this.useLock = config.getBoolean(DistributedConfig.REBALENCE_LOCK_ENABLE);
+
 
         stopping = new AtomicBoolean(false);
         configState = ClusterConfigState.EMPTY;
@@ -813,14 +820,7 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
     private void startWork() {
         // Start assigned connectors and tasks
         log.info("Starting connectors and tasks using config offset {}", assignment.offset());
-        List<Callable<Void>> callables = new ArrayList<>();
-        for (String connectorName : assignment.connectors()) {
-            callables.add(getConnectorStartingCallable(connectorName));
-        }
-
-        for (ConnectorTaskId taskId : assignment.tasks()) {
-            callables.add(getTaskStartingCallable(taskId));
-        }
+        List<Callable<Void>> callables = callablesOnBalanceResumed();
         startAndStop(callables);
         log.info("Finished starting connectors and tasks");
     }
@@ -1154,6 +1154,68 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
         }
     }
 
+    private List<Callable<Void>> callablesForRevoked(){
+        List<Callable<Void>> callables = new ArrayList<>();
+        if (!this.useLock){
+            for (final String connectorName : connectorsLastTurnAssigned) {
+                callables.add(getConnectorStoppingCallable(connectorName));
+            }
+
+            // TODO: We need to at least commit task offsets, but if we could commit offsets & pause them instead of
+            // stopping them then state could continue to be reused when the task remains on this worker. For example,
+            // this would avoid having to close a connection and then reopen it when the task is assigned back to this
+            // worker again.
+            for (final ConnectorTaskId taskId : tasksLastTurnAssigned) {
+                callables.add(getTaskStoppingCallable(taskId));
+            }
+
+        }
+        return callables;
+    }
+
+    public List<Callable<Void>> callablesOnBalanceResumed(){
+
+        List<Callable<Void>> callables = new ArrayList<>();
+
+        if (useLock){
+            //deal with connectors
+            for (String connectorName : assignment.connectors()) {
+                if (!connectorsLastTurnAssigned.contains(connectorName)){
+                    callables.add(getConnectorStartingCallable(connectorName));
+                }
+            }
+            for (String connectorName: connectorsLastTurnAssigned){
+                if (!assignment.connectors().contains(connectorName)){
+                    callables.add(getConnectorStoppingCallable(connectorName));
+                }
+            }
+            //deal with tasks
+
+            for (ConnectorTaskId taskId : assignment.tasks()) {
+                if (!tasksLastTurnAssigned.contains(taskId)){
+                    callables.add(getTaskStartingCallable(taskId));
+                }
+            }
+
+            for (ConnectorTaskId taskId : tasksLastTurnAssigned) {
+                if (!assignment.tasks().contains(taskId)){
+                    callables.add(getTaskStoppingCallable(taskId));
+                }
+            }
+        }else{
+            for (String connectorName : assignment.connectors()) {
+                callables.add(getConnectorStartingCallable(connectorName));
+            }
+
+            for (ConnectorTaskId taskId : assignment.tasks()) {
+                callables.add(getTaskStartingCallable(taskId));
+            }
+        }
+        return callables;
+
+    }
+
+
     // Rebalances are triggered internally from the group member, so these are always executed in the work thread.
     public class RebalanceListener implements WorkerRebalanceListener {
         @Override
@@ -1194,18 +1256,10 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
                 // this worker. Instead, we can let them continue to run but buffer any update requests (which should be
                 // rare anyway). This would avoid a steady stream of start/stop, which probably also includes lots of
                 // unnecessary repeated connections to the source/sink system.
-                List<Callable<Void>> callables = new ArrayList<>();
-                for (final String connectorName : connectors) {
-                    callables.add(getConnectorStoppingCallable(connectorName));
-                }
 
-                // TODO: We need to at least commit task offsets, but if we could commit offsets & pause them instead of
-                // stopping them then state could continue to be reused when the task remains on this worker. For example,
-                // this would avoid having to close a connection and then reopen it when the task is assigned back to this
-                // worker again.
-                for (final ConnectorTaskId taskId : tasks) {
-                    callables.add(getTaskStoppingCallable(taskId));
-                }
+                connectorsLastTurnAssigned = connectors;
+                tasksLastTurnAssigned = tasks;
+                List<Callable<Void>> callables = callablesForRevoked();
 
                 // The actual timeout for graceful task stop is applied in worker's stopAndAwaitTask method.
                 startAndStop(callables);

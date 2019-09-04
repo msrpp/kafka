@@ -25,6 +25,8 @@ import org.apache.kafka.connect.connector.ConnectorContext;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.runtime.isolation.Plugins;
+import org.apache.kafka.connect.runtime.zkclient.Lock;
+import org.apache.kafka.connect.runtime.zkclient.ZkDistributeLock;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -78,6 +80,8 @@ public class Worker {
     private final ConcurrentMap<String, WorkerConnector> connectors = new ConcurrentHashMap<>();
     private final ConcurrentMap<ConnectorTaskId, WorkerTask> tasks = new ConcurrentHashMap<>();
     private SourceTaskOffsetCommitter sourceTaskOffsetCommitter;
+
+    private Lock taskLock;
 
     public Worker(
             String workerId,
@@ -135,6 +139,9 @@ public class Worker {
         producerProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "1");
         // User-specified overrides
         producerProps.putAll(config.originalsWithPrefix("producer."));
+        if (config.getBoolean(WorkerConfig.REBALENCE_LOCK_ENABLE)) {
+            taskLock = new ZkDistributeLock(config.getString(WorkerConfig.ZOOKEEPER_SERVERS),config.getString(WorkerConfig.ZOKKEPER_ROOT_PATH));
+        }
     }
 
     /**
@@ -426,7 +433,7 @@ public class Worker {
                     internalKeyConverter, internalValueConverter);
             KafkaProducer<byte[], byte[]> producer = new KafkaProducer<>(producerProps);
             return new WorkerSourceTask(id, (SourceTask) task, statusListener, initialState, keyConverter,
-                    valueConverter, transformationChain, producer, offsetReader, offsetWriter, config, loader, time);
+                    valueConverter, transformationChain, producer, offsetReader, offsetWriter, config, loader, time ,taskLock);
         } else if (task instanceof SinkTask) {
             TransformationChain<SinkRecord> transformationChain = new TransformationChain<>(connConfig.<SinkRecord>transformations());
             return new WorkerSinkTask(id, (SinkTask) task, statusListener, initialState, config, keyConverter,
