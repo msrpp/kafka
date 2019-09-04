@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 /**
- * @Author: chenweijie@lvwan.com
+ * @Author: chenweijie
  * @Date: 2019-08-30
  * @Description  non-reentrant
  */

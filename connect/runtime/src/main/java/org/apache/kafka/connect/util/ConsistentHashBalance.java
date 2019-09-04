@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * @Author: chenweijie@lvwan.com
+ * @Author: chenweijie
  * @Date: 2019-09-03
  * @Description
  */

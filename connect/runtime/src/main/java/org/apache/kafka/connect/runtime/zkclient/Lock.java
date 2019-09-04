@@ -1,7 +1,7 @@
 package org.apache.kafka.connect.runtime.zkclient;
 
 /**
- * @Author: chenweijie@lvwan.com
+ * @Author: chenweijie
  * @Date: 2019-08-31
  * @Description
  */

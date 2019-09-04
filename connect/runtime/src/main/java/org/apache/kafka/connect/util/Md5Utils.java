@@ -5,7 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * @Author: chenweijie@lvwan.com
+ * @Author: chenweijie
  * @Date: 2019-09-02
  * @Description
  */
