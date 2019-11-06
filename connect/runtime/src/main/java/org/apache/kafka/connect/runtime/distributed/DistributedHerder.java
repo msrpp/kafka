@@ -46,16 +46,7 @@ import org.apache.kafka.connect.util.SinkUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
@@ -1175,6 +1166,7 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
 
     public List<Callable<Void>> callablesOnBalanceResumed(){
 
+        log.info("invoke callablesOnBalanceResumed ");
         List<Callable<Void>> callables = new ArrayList<>();
 
         if (useLock){
@@ -1200,6 +1192,14 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
             for (ConnectorTaskId taskId : tasksLastTurnAssigned) {
                 if (!assignment.tasks().contains(taskId)){
                     callables.add(getTaskStoppingCallable(taskId));
+                }//we should restart task on task config changed
+                else  {
+                    Map<String,String> preTaskConfig = worker.runningTaskConfig(taskId);
+                    if ( !preTaskConfig.equals(configState.taskConfig(taskId))){
+                        log.info("task config changed ,now we restart this task {}",taskId);
+                        callables.add(getTaskStoppingCallable(taskId));
+                        callables.add(getTaskStartingCallable(taskId));
+                    }
                 }
             }
         }else{

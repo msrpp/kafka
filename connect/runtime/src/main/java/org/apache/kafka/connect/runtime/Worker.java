@@ -79,6 +79,7 @@ public class Worker {
 
     private final ConcurrentMap<String, WorkerConnector> connectors = new ConcurrentHashMap<>();
     private final ConcurrentMap<ConnectorTaskId, WorkerTask> tasks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<ConnectorTaskId, Map<String,String>> workingTaskConfigs = new ConcurrentHashMap<>();
     private SourceTaskOffsetCommitter sourceTaskOffsetCommitter;
 
     private Lock taskLock;
@@ -408,7 +409,7 @@ public class Worker {
         WorkerTask existing = tasks.putIfAbsent(id, workerTask);
         if (existing != null)
             throw new ConnectException("Task already exists in this worker: " + id);
-
+        workingTaskConfigs.put(id,taskProps);
         executor.submit(workerTask);
         if (workerTask instanceof WorkerSourceTask) {
             sourceTaskOffsetCommitter.schedule(id, (WorkerSourceTask) workerTask);
@@ -474,6 +475,7 @@ public class Worker {
 
     private void awaitStopTask(ConnectorTaskId taskId, long timeout) {
         WorkerTask task = tasks.remove(taskId);
+        workingTaskConfigs.remove(taskId);
         if (task == null) {
             log.warn("Ignoring await stop request for non-present task {}", taskId);
             return;
@@ -579,5 +581,9 @@ public class Worker {
         } finally {
             Plugins.compareAndSwapLoaders(savedLoader);
         }
+    }
+
+    public Map<String,String> runningTaskConfig(ConnectorTaskId connectorTaskId){
+        return workingTaskConfigs.get(connectorTaskId);
     }
 }

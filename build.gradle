@@ -104,28 +104,28 @@ ext {
 
 apply from: file('wrapper.gradle')
 
-if (new File('.git').exists()) {
-  apply from: file('gradle/rat.gradle')
-  rat {
-    // Exclude everything under the directory that git should be ignoring via .gitignore or that isn't checked in. These
-    // restrict us only to files that are checked in or are staged.
-    def repo = Grgit.open(project.file('.'))
-    excludes = new ArrayList<String>(repo.clean(ignore: false, directories: true, dryRun: true))
-    // And some of the files that we have checked in should also be excluded from this check
-    excludes.addAll([
-        '**/.git/**',
-        '**/build/**',
-        'CONTRIBUTING.md',
-        'gradlew',
-        'gradlew.bat',
-        '**/README.md',
-        '**/id_rsa',
-        '**/id_rsa.pub',
-        'checkstyle/suppressions.xml',
-        'streams/quickstart/java/src/test/resources/projects/basic/goal.txt'
-    ])
-  }
-}
+//if (new File('.git').exists()) {
+//  apply from: file('gradle/rat.gradle')
+//  rat {
+//    // Exclude everything under the directory that git should be ignoring via .gitignore or that isn't checked in. These
+//    // restrict us only to files that are checked in or are staged.
+//    def repo = Grgit.open(project.file('.'))
+//    excludes = new ArrayList<String>(repo.clean(ignore: false, directories: true, dryRun: true))
+//    // And some of the files that we have checked in should also be excluded from this check
+//    excludes.addAll([
+//        '**/.git/**',
+//        '**/build/**',
+//        'CONTRIBUTING.md',
+//        'gradlew',
+//        'gradlew.bat',
+//        '**/README.md',
+//        '**/id_rsa',
+//        '**/id_rsa.pub',
+//        'checkstyle/suppressions.xml',
+//        'streams/quickstart/java/src/test/resources/projects/basic/goal.txt'
+//    ])
+//  }
+//}
 
 subprojects {
   apply plugin: 'java'
@@ -320,12 +320,12 @@ subprojects {
       jvmArgs = ['-Xss2m'] + maxPermSizeArgs
     }
   }
-
+  
   checkstyle {
     configFile = new File(rootDir, "checkstyle/checkstyle.xml")
     configProperties = [importControlFile: "$rootDir/checkstyle/import-control.xml"]
     // version 7.x requires Java 8
-    toolVersion = '6.19'
+    toolVersion = '5.9'
   }
   test.dependsOn('checkstyleMain', 'checkstyleTest')
 
@@ -501,7 +501,6 @@ project(':core') {
   println "Building project 'core' with Scala version ${versions.scala}"
 
   apply plugin: 'scala'
-  apply plugin: "org.scoverage"
   archivesBaseName = "kafka_${versions.baseScala}"
 
   dependencies {
@@ -532,19 +531,9 @@ project(':core') {
     testCompile libs.scalaTest
     testCompile libs.jfreechart
 
-    scoverage libs.scoveragePlugin
-    scoverage libs.scoverageRuntime
   }
 
   jacocoTestReport.enabled = false
-  scoverage {
-    reportDir = file("${rootProject.buildDir}/scoverage")
-    highlighting = false
-  }
-  checkScoverage {
-    minimumRate = 0.0
-  }
-  checkScoverage.shouldRunAfter('test')
 
   configurations {
     // manually excludes some unnecessary dependencies
@@ -907,13 +896,7 @@ project(':streams:examples') {
 
 project(':jmh-benchmarks') {
 
-  apply plugin: 'com.github.johnrengelman.shadow'
-
-  shadowJar {
-    baseName = 'kafka-jmh-benchmarks-all'
-    classifier = null
-    version = null
-  }
+  
 
   dependencies {
       compile project(':clients')
@@ -970,6 +953,7 @@ project(':connect:api') {
   dependencies {
     compile project(':clients')
     compile libs.slf4jApi
+    compile libs.zkFramework
 
     testCompile libs.junit
 
