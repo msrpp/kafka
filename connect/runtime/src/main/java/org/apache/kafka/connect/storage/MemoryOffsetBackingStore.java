@@ -24,13 +24,10 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Implementation of OffsetBackingStore that doesn't actually persist any data. To ensure this
@@ -114,4 +111,35 @@ public class MemoryOffsetBackingStore implements OffsetBackingStore {
     protected void save() {
 
     }
+
+    @Override
+    public Future<Map<ByteBuffer, ByteBuffer>> all() {
+        return new Future<Map<ByteBuffer, ByteBuffer>>() {
+            @Override
+            public boolean cancel(boolean mayInterruptIfRunning) {
+                return false;
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return false;
+            }
+
+            @Override
+            public boolean isDone() {
+                return false;
+            }
+
+            @Override
+            public Map<ByteBuffer, ByteBuffer> get() throws InterruptedException, ExecutionException {
+                return Collections.EMPTY_MAP;
+            }
+
+            @Override
+            public Map<ByteBuffer, ByteBuffer> get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+                return null;
+            }
+        };
+    }
+
 }

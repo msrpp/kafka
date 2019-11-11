@@ -17,10 +17,7 @@
 package org.apache.kafka.connect.runtime;
 
 import org.apache.kafka.connect.runtime.isolation.Plugins;
-import org.apache.kafka.connect.runtime.rest.entities.ConfigInfos;
-import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
-import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
-import org.apache.kafka.connect.runtime.rest.entities.TaskInfo;
+import org.apache.kafka.connect.runtime.rest.entities.*;
 import org.apache.kafka.connect.util.Callback;
 import org.apache.kafka.connect.util.ConnectorTaskId;
 
@@ -68,6 +65,9 @@ public interface Herder {
      *         request (e.g., it is not in sync with other worker's config state)
      */
     void connectors(Callback<Collection<String>> callback);
+
+
+    void connectorOffset(String connName,Callback<List<OffsetInfo>> callback);
 
     /**
      * Get the definition and status of a connector.

@@ -586,4 +586,10 @@ public class Worker {
     public Map<String,String> runningTaskConfig(ConnectorTaskId connectorTaskId){
         return workingTaskConfigs.get(connectorTaskId);
     }
+
+    public Map<Map<String, Object>, Map<String, Object>> offsetsAll(String connName){
+        OffsetStorageReaderImpl offsetReader = new OffsetStorageReaderImpl(offsetBackingStore, connName,
+                internalKeyConverter, internalValueConverter);
+        return ((OffsetStorageReaderImpl) offsetReader).offsetsAll();
+    }
 }

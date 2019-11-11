@@ -22,10 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Implementation of OffsetStorageReader. Unlike OffsetStorageWriter which is implemented
@@ -106,5 +104,32 @@ public class OffsetStorageReaderImpl implements OffsetStorageReader {
         }
 
         return result;
+    }
+
+     public  Map<Map<String, Object>, Map<String, Object>> offsetsAll() {
+         Map<Map<String, Object>, Map<String, Object>> results = new HashMap<>();
+         Map<ByteBuffer, ByteBuffer> raw = null;
+         try {
+             raw = backingStore.all().get();
+             log.trace("get raw offset size:{}",raw.size());
+             for (Map.Entry<ByteBuffer,ByteBuffer> entry : raw.entrySet()){
+                 ByteBuffer rawKey = entry.getKey();
+                 SchemaAndValue svk = keyConverter.toConnectData(namespace,rawKey.array());
+                 List<Object> origKey = (List<Object>)svk.value();
+                 //sv.schema() is null
+                 if (origKey.size() == 2 && (origKey.get(0)).equals(namespace)){
+                     SchemaAndValue svv = valueConverter.toConnectData(namespace,entry.getValue().array());
+                     Map<String,Object> origVal = (Map<String, Object>)svv.value();
+                     results.put((Map<String, Object>) origKey.get(1),origVal);
+                 }
+
+             }
+
+         } catch (InterruptedException e) {
+             e.printStackTrace();
+         } catch (ExecutionException e) {
+             e.printStackTrace();
+         }
+         return results;
     }
 }

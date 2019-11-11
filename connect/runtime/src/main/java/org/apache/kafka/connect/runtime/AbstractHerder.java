@@ -24,12 +24,7 @@ import org.apache.kafka.common.config.ConfigValue;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.errors.NotFoundException;
 import org.apache.kafka.connect.runtime.isolation.Plugins;
-import org.apache.kafka.connect.runtime.rest.entities.ConfigInfo;
-import org.apache.kafka.connect.runtime.rest.entities.ConfigInfos;
-import org.apache.kafka.connect.runtime.rest.entities.ConfigKeyInfo;
-import org.apache.kafka.connect.runtime.rest.entities.ConfigValueInfo;
-import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
-import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
+import org.apache.kafka.connect.runtime.rest.entities.*;
 import org.apache.kafka.connect.runtime.rest.errors.BadRequestException;
 import org.apache.kafka.connect.source.SourceConnector;
 import org.apache.kafka.connect.storage.ConfigBackingStore;
@@ -99,6 +94,10 @@ public abstract class AbstractHerder implements Herder, TaskStatus.Listener, Con
         this.worker.start();
         this.statusBackingStore.start();
         this.configBackingStore.start();
+    }
+
+    public void connectorOffset(String connName,Callback<List<OffsetInfo>> callback){
+
     }
 
     protected void stopServices() {

@@ -21,8 +21,13 @@ import org.apache.kafka.connect.util.Callback;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * <p>
@@ -74,4 +79,8 @@ public interface OffsetBackingStore {
      * @param config can be DistributedConfig or StandaloneConfig
      */
     void configure(WorkerConfig config);
+
+
+    Future<Map<ByteBuffer, ByteBuffer>> all();
+
 }

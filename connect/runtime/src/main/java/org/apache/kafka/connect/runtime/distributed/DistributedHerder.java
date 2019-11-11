@@ -36,6 +36,7 @@ import org.apache.kafka.connect.runtime.TargetState;
 import org.apache.kafka.connect.runtime.Worker;
 import org.apache.kafka.connect.runtime.rest.RestServer;
 import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
+import org.apache.kafka.connect.runtime.rest.entities.OffsetInfo;
 import org.apache.kafka.connect.runtime.rest.entities.TaskInfo;
 import org.apache.kafka.connect.sink.SinkConnector;
 import org.apache.kafka.connect.storage.ConfigBackingStore;
@@ -403,8 +404,8 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
                 new Callable<Void>() {
                     @Override
                     public Void call() throws Exception {
-                        if (checkRebalanceNeeded(callback))
-                            return null;
+//                        if (checkRebalanceNeeded(callback))
+//                            return null;
 
                         callback.onCompletion(null, configState.connectors());
                         return null;
@@ -1305,6 +1306,36 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
                 log.info("Wasn't unable to resume work after last rebalance, can skip stopping connectors and tasks");
             }
         }
+    }
+
+    @Override
+    public void connectorOffset(final String connName,final Callback<List<OffsetInfo>> callback){
+
+        addRequest(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                log.info("get connectorOffset begin");
+                List<OffsetInfo> offsetInfos = new ArrayList<>();
+                Map<Map<String, Object>, Map<String, Object>> results = worker.offsetsAll(connName);
+                log.info("get offset size {}", results.size());
+                for (Map.Entry<Map<String, Object>, Map<String, Object>> entry : results.entrySet()) {
+                    OffsetInfo offsetInfo = new OffsetInfo();
+                    offsetInfo.setKey(entry.getKey());
+                    offsetInfo.setValue(entry.getValue());
+                    offsetInfos.add(offsetInfo);
+                }
+                callback.onCompletion(null, offsetInfos);
+                return null;
+            }
+        }, new Callback<Void>() {
+            @Override
+            public void onCompletion(Throwable error, Void result) {
+                if (error != null){
+                    log.error("meet err {}",error);
+                }
+            }
+        });
+
     }
 
 }

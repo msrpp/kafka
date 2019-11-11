@@ -22,10 +22,7 @@ import org.apache.kafka.connect.runtime.Herder;
 import org.apache.kafka.connect.runtime.distributed.RebalanceNeededException;
 import org.apache.kafka.connect.runtime.distributed.RequestTargetException;
 import org.apache.kafka.connect.runtime.rest.RestServer;
-import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
-import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
-import org.apache.kafka.connect.runtime.rest.entities.CreateConnectorRequest;
-import org.apache.kafka.connect.runtime.rest.entities.TaskInfo;
+import org.apache.kafka.connect.runtime.rest.entities.*;
 import org.apache.kafka.connect.runtime.rest.errors.ConnectRestException;
 import org.apache.kafka.connect.util.ConnectorTaskId;
 import org.apache.kafka.connect.util.FutureCallback;
@@ -110,6 +107,16 @@ public class ConnectorsResource {
         herder.connectorInfo(connector, cb);
         return completeOrForwardRequest(cb, "/connectors/" + connector, "GET", null, forward);
     }
+
+    @GET
+    @Path("/{connector}/offset")
+    public List<OffsetInfo> getConnectorOfsset(final @PathParam("connector") String connector,
+                                         final @QueryParam("forward") Boolean forward) throws Throwable {
+        FutureCallback<List<OffsetInfo>> cb = new FutureCallback<>();
+        herder.connectorOffset(connector, cb);
+        return completeOrForwardRequest(cb, "/connectors/" + connector, "GET", null, forward);
+    }
+
 
     @GET
     @Path("/{connector}/config")
